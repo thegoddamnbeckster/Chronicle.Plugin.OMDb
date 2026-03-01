@@ -1,0 +1,10 @@
+﻿{
+  "plugin_id": "chronicle.plugin.omdb",
+  "name": "OMDb",
+  "version": "1.0.0",
+  "author": "thegoddamnbeckster",
+  "description": "Chronicle metadata plugin for OMDb.",
+  "entry_type": "Chronicle.Plugin.OMDb.OMDbPlugin",
+  "min_chronicle_version": "0.6.0",
+  "supported_media_types": ["movie", "tv"]
+}
