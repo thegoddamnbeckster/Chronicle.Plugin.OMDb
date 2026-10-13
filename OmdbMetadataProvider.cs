@@ -25,12 +25,13 @@ public sealed class OmdbMetadataProvider : IMetadataProvider, IDisposable
 {
     public string PluginId => "chronicle.plugin.omdb";
     public string Name     => "OMDb";
-    public string Version  => "1.0.0";
+    public string Version  => "1.0.1";
     public string Author   => "Chronicle Contributors";
 
     public const string KeyApiKey = "api_key";
     public const string KeyPlotLength = "plot_length";
     public const string KeySearchWithoutId = "search_without_imdb_id";
+    public const string KeyScope = "scope";
 
     private static readonly ILogger Log = Serilog.Log.ForContext<OmdbMetadataProvider>();
 
@@ -39,7 +40,9 @@ public sealed class OmdbMetadataProvider : IMetadataProvider, IDisposable
     private bool _clientSupplied;
     private bool _fullPlot = true;
     private bool _searchWithoutId;
+    private bool _episodesOnly = true;
 
+    internal bool EpisodesOnly => _episodesOnly;
     internal bool FullPlot => _fullPlot;
     internal bool SearchWithoutId => _searchWithoutId;
     internal string? ConfiguredUserAgent { get; private set; }
@@ -51,8 +54,9 @@ public sealed class OmdbMetadataProvider : IMetadataProvider, IDisposable
 
     public OmdbMetadataProvider() { }
 
-    internal OmdbMetadataProvider(OmdbClient client, bool fullPlot = true, bool searchWithoutId = false)
+    internal OmdbMetadataProvider(OmdbClient client, bool fullPlot = true, bool searchWithoutId = false, bool episodesOnly = false)
     {
+        _episodesOnly = episodesOnly;
         _client = client;
         _clientSupplied = true;
         _fullPlot = fullPlot;
@@ -108,6 +112,17 @@ public sealed class OmdbMetadataProvider : IMetadataProvider, IDisposable
             },
             new SettingDefinition
             {
+                Key = KeyScope, Label = "What to look up", Type = SettingType.Dropdown, DefaultValue = "episodes",
+                Description = "The free key allows 1,000 requests a day, and OMDb's value to this library is TV episodes: their plots and " +
+                              "pictures, which other sources often lack. Movies and shows are already complete from TMDB and IMDb, and would " +
+                              "only add Rotten Tomatoes and Metacritic scores, but a pass over them spends days of the quota before it reaches " +
+                              "a single episode. Choose \"Everything\" to look those up too (items skipped meanwhile show as not found: use " +
+                              "Reset Not Found on this plugin to look them up after switching).",
+                Options = [new SelectOption { Value = "episodes", Label = "TV episodes only" },
+                           new SelectOption { Value = "all", Label = "Everything: movies, shows and episodes" }],
+            },
+            new SettingDefinition
+            {
                 Key = KeyPlotLength, Label = "Plot length", Type = SettingType.Dropdown, DefaultValue = "full",
                 Description = "Full plots are several sentences; short ones are a sentence or two.",
                 Options = [new SelectOption { Value = "full", Label = "Full" }, new SelectOption { Value = "short", Label = "Short" }],
@@ -127,6 +142,7 @@ public sealed class OmdbMetadataProvider : IMetadataProvider, IDisposable
         string? Get(string key) => settings.TryGetValue(key, out var v) ? v?.Trim() : null;
 
         _fullPlot = !string.Equals(Get(KeyPlotLength), "short", StringComparison.OrdinalIgnoreCase);
+        _episodesOnly = !string.Equals(Get(KeyScope), "all", StringComparison.OrdinalIgnoreCase);
         _searchWithoutId = bool.TryParse(Get(KeySearchWithoutId), out var search) && search;
 
         if (_clientSupplied) return;   // a client was supplied directly (tests)
@@ -142,7 +158,7 @@ public sealed class OmdbMetadataProvider : IMetadataProvider, IDisposable
         _ownedHttp.DefaultRequestHeaders.UserAgent.TryParseAdd(ConfiguredUserAgent);
         _client = new OmdbClient(_ownedHttp, key, OmdbClient.Interval, Log);
         _records.Clear();
-        Log.Information("OMDb configured ({Plot} plots, {Search})", _fullPlot ? "full" : "short",
+        Log.Information("OMDb configured ({Scope}, {Plot} plots, {Search})", _episodesOnly ? "TV episodes only" : "everything", _fullPlot ? "full" : "short",
             _searchWithoutId ? "titles without an IMDb id are searched" : "lookups by IMDb id only");
     }
 
@@ -173,6 +189,9 @@ public sealed class OmdbMetadataProvider : IMetadataProvider, IDisposable
 
         // Seasons have no OMDb record; a movie's collection (level 1+) is not a title.
         if (!LevelIsOffered(family, context.HierarchyLevel)) return [];
+
+        // "TV episodes only" (the default): movies and shows cost nothing here, so the day's requests go to episodes.
+        if (_episodesOnly && !(family == Family.Series && context.HierarchyLevel == 2)) return [];
 
         // An IMDb id the item already holds is the surest match, and the only one that costs nothing in guessing.
         if (await KnownIdentifierAsync(context, family, ct).ConfigureAwait(false) is { } known) return [known];

@@ -21,9 +21,22 @@ public class ConfigurationTests
         var provider = new OmdbMetadataProvider();
         provider.Configure(new Dictionary<string, string> { ["api_key"] = "abc12345" });
 
-        Assert.Equal("Chronicle-OMDb/1.0.0", provider.ConfiguredUserAgent);
+        Assert.Equal("Chronicle-OMDb/1.0.1", provider.ConfiguredUserAgent);
         Assert.DoesNotContain("abc12345", provider.ConfiguredUserAgent);
         provider.Dispose();
+    }
+
+    [Theory]
+    [InlineData("episodes", true)]
+    [InlineData("all", false)]
+    [InlineData("ALL", false)]
+    [InlineData("", true)]
+    [InlineData("nonsense", true)]
+    public void TheScope_IsEpisodesOnlyUnlessEverythingIsChosen(string value, bool episodesOnly)
+    {
+        var provider = new OmdbMetadataProvider(new FakeOmdb().Client());
+        provider.Configure(new Dictionary<string, string> { ["scope"] = value });
+        Assert.Equal(episodesOnly, provider.EpisodesOnly);
     }
 
     [Theory]
@@ -57,7 +70,9 @@ public class ConfigurationTests
     {
         var schema = new OmdbMetadataProvider().GetSettingsSchema().Settings;
 
-        Assert.Equal(["api_key", "plot_length", "search_without_imdb_id"], schema.Select(s => s.Key).ToArray());
+        Assert.Equal(["api_key", "scope", "plot_length", "search_without_imdb_id"], schema.Select(s => s.Key).ToArray());
+        Assert.Equal("episodes", schema.Single(s => s.Key == "scope").DefaultValue);
+        Assert.Equal(["episodes", "all"], schema.Single(s => s.Key == "scope").Options.Select(o => o.Value).ToArray());
         var key = schema.Single(s => s.Key == "api_key");
         Assert.Equal(SettingType.Password, key.Type);
         Assert.True(key.Required);

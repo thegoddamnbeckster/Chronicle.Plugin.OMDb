@@ -8,8 +8,8 @@ namespace Chronicle.Plugin.OMDb.Tests;
 
 public class ProviderTests
 {
-    private static OmdbMetadataProvider Provider(FakeOmdb fake, bool searchWithoutId = false) =>
-        new(fake.Client(), fullPlot: true, searchWithoutId);
+    private static OmdbMetadataProvider Provider(FakeOmdb fake, bool searchWithoutId = false, bool episodesOnly = false) =>
+        new(fake.Client(), fullPlot: true, searchWithoutId, episodesOnly);
 
     private static MediaSearchContext Item(string type, int level, string name, string? imdb = null, int? year = null, string? known = "imdb") =>
         new(name, Year: year, HierarchyLevel: level, IsRealHierarchyPosition: true, MediaTypeName: type,
@@ -93,6 +93,49 @@ public class ProviderTests
     [InlineData("anime", 2, "tt0959621")]
     public async Task TheAnimeTypes_FollowTheirFamily(string type, int level, string imdb) =>
         Assert.Single(await Provider(FakeOmdb.Catalogue()).SearchAsync(Item(type, level, "X", imdb)));
+
+    // ── scope: TV episodes only (the default) ─────────────────────────────────
+
+    [Theory]
+    [InlineData("movies", 0, "tt0133093")]
+    [InlineData("anime_movies", 0, "tt0133093")]
+    [InlineData("tv", 0, "tt0903747")]
+    [InlineData("anime", 0, "tt0903747")]
+    public async Task WithTheScopeAtEpisodesOnly_MoviesAndShowsCostNothing(string type, int level, string imdb)
+    {
+        var fake = FakeOmdb.Catalogue();
+        var results = await Provider(fake, episodesOnly: true).SearchAsync(Item(type, level, "Whatever", imdb));
+
+        Assert.Empty(results);
+        Assert.Equal(0, fake.Requests);
+    }
+
+    [Theory]
+    [InlineData("tv")]
+    [InlineData("anime")]
+    public async Task WithTheScopeAtEpisodesOnly_AnEpisodeIsStillLookedUp(string type)
+    {
+        var fake = FakeOmdb.Catalogue();
+        var results = await Provider(fake, episodesOnly: true).SearchAsync(Item(type, 2, "Episode 1", "tt0959621"));
+
+        Assert.Equal(100, results.Single().Score);
+        Assert.Equal(1, fake.Requests);
+    }
+
+    [Fact]
+    public async Task WithTheScopeAtEpisodesOnly_TheSearchByNameIsNeverUsedEither()
+    {
+        var fake = FakeOmdb.Catalogue();
+        Assert.Empty(await Provider(fake, searchWithoutId: true, episodesOnly: true).SearchAsync(Item("tv", 0, "Breaking Bad", year: 2008)));
+        Assert.Equal(0, fake.Requests);
+    }
+
+    [Fact]
+    public async Task FreeText_IsNotLimitedByTheScope()
+    {
+        var fake = FakeOmdb.Catalogue();
+        Assert.NotEmpty(await Provider(fake, episodesOnly: true).SearchAsync(new MediaSearchContext("matrix")));
+    }
 
     // ── what is not looked up ─────────────────────────────────────────────────
 

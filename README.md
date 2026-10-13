@@ -7,7 +7,7 @@ Movie, series and episode metadata plugin for [Chronicle](https://github.com/the
 Fetches full plots, posters, runtimes, cast and crew, and ratings from IMDb, Rotten Tomatoes and Metacritic from [OMDb](https://www.omdbapi.com/), by IMDb id. It fills what the other sources leave blank, above all **TV episodes** (plots and pictures for episodes of reality, game and daily shows that TMDB and TVMaze have nothing for).
 
 **Plugin ID:** `chronicle.plugin.omdb`
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Auth:** A free OMDb API key (1,000 requests a day), from [omdbapi.com/apikey.aspx](https://www.omdbapi.com/apikey.aspx)
 
 Metadata provided by [OMDb](https://www.omdbapi.com/) (content licensed CC BY-NC 4.0: for personal, non-commercial use). OMDb is not endorsed by or affiliated with IMDb.
@@ -36,6 +36,10 @@ The IMDb id is also published under `ids` for other plugins.
 ---
 
 ## Features
+
+### What is looked up
+
+By default **TV episodes only**. On the free key (1,000 requests a day) a pass over the thousands of movies and shows, which TMDB and IMDb already complete, would spend days of the quota before reaching one episode, and would add only Rotten Tomatoes and Metacritic scores. The setting **What to look up** can be switched to *Everything*; items skipped meanwhile show as "not found", so use *Reset Not Found* on the plugin after switching.
 
 ### Lookup by IMDb id
 
@@ -70,6 +74,7 @@ The free key allows 1,000 requests a day. When they are used up OMDb answers HTT
 | Setting | Required | Default | Description |
 |---------|----------|---------|-------------|
 | `api_key` | Yes | | Your free OMDb key. Stored encrypted. |
+| `scope` | | `episodes` | `episodes` (TV episodes only) or `all` (movies, shows and episodes). |
 | `plot_length` | | `full` | `full` (several sentences) or `short`. |
 | `search_without_imdb_id` | | `false` | Also search movies and shows that have no IMDb id, by name and year. |
 
