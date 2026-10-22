@@ -6,6 +6,9 @@
   "description": "Movie, series and episode metadata from OMDb by IMDb id: full plots, posters, runtimes, cast and crew, and ratings from IMDb, Rotten Tomatoes and Metacritic. Needs a free OMDb API key (omdbapi.com/apikey.aspx, 1,000 requests a day). Fills what other sources lack, especially TV episodes.",
   "min_chronicle_version": "0.7.0",
   "entry_type":  "Chronicle.Plugin.OMDb.OmdbMetadataProvider",
+  "sourceUrls": [
+    { "match": "^(tt\\d+)$", "url": "https://www.imdb.com/title/$1/" }
+  ],
   "iconUrl":     "https://www.omdbapi.com/favicon.ico",
   "brandColorLight": "#B8860B",
   "brandColorDark":  "#F5C242",
