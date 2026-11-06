@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Chronicle.Plugin.OMDb</AssemblyName>
     <RootNamespace>Chronicle.Plugin.OMDb</RootNamespace>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Authors>Chronicle Contributors</Authors>
     <Description>OMDb movie, series and episode metadata plugin for Chronicle: plots, posters, ratings from IMDb, Rotten Tomatoes and Metacritic. Needs a free OMDb API key.</Description>
   </PropertyGroup>
