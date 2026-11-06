@@ -21,7 +21,7 @@ public class ConfigurationTests
         var provider = new OmdbMetadataProvider();
         provider.Configure(new Dictionary<string, string> { ["api_key"] = "abc12345" });
 
-        Assert.Equal("Chronicle-OMDb/1.0.1", provider.ConfiguredUserAgent);
+        Assert.Equal($"Chronicle-OMDb/{provider.Version}", provider.ConfiguredUserAgent);
         Assert.DoesNotContain("abc12345", provider.ConfiguredUserAgent);
         provider.Dispose();
     }

@@ -25,7 +25,7 @@ public sealed class OmdbMetadataProvider : IMetadataProvider, IDisposable
 {
     public string PluginId => "chronicle.plugin.omdb";
     public string Name     => "OMDb";
-    public string Version  => "1.0.1";
+    public string Version  => System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(OmdbMetadataProvider).Assembly)?.InformationalVersion.Split('+')[0] ?? "1.0.2";
     public string Author   => "Chronicle Contributors";
 
     public const string KeyApiKey = "api_key";
