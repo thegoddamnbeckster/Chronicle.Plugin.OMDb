@@ -24,7 +24,7 @@ internal sealed class OmdbClient : IDisposable
     public static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(250);
     public const string PluginId = "chronicle.plugin.omdb";
 
-    private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
+    private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true, Converters = { new TextOrAnythingConverter() } };
 
     private static readonly string[] NotFoundErrors =
         ["Incorrect IMDb ID.", "Movie not found!", "Series not found!", "Episode not found!", "Error getting data.", "Season not found!", "Too many results."];
@@ -133,8 +133,15 @@ internal sealed class OmdbClient : IDisposable
         }
         catch (JsonException ex)
         {
-            throw new HttpRequestException("OMDb returned an answer this plugin could not read", ex, response.StatusCode);
+            throw new HttpRequestException($"OMDb returned an answer this plugin could not read ({ex.Message}; began: {Excerpt(body)})", ex, response.StatusCode);
         }
+    }
+
+    /// <summary>The start of an answer, on one line, so a failure to read it says what OMDb actually sent.</summary>
+    internal static string Excerpt(string body)
+    {
+        var flat = string.Join(' ', body.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        return flat.Length <= 160 ? flat : flat[..160] + "...";
     }
 
     /// <summary>The error text of an answer ({"Response":"False","Error":"..."}), or null when it is not an error.</summary>

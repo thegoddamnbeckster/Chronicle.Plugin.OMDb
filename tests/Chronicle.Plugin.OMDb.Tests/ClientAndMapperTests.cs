@@ -34,6 +34,31 @@ public class ClientTests
     public async Task ATitleOmdbDoesNotHave_IsANormalNotFound(string id) => Assert.Null(await Get(FakeOmdb.Catalogue(), id));
 
     [Fact]
+    public async Task ARecordWithANumberOrAListWhereTextBelongs_IsStillRead()
+    {
+        var fake = new FakeOmdb().RouteBody(q => q.Contains("i=tt0000001"),
+            "{\"Title\":\"Odd\",\"Year\":2013,\"Season\":6,\"Episode\":\"3\",\"Genre\":[\"Drama\",\"Comedy\"],\"imdbRating\":null,\"Type\":\"episode\",\"Response\":\"True\"}");
+        var record = await Get(fake, "tt0000001");
+
+        Assert.Equal("Odd", record!.Title);
+        Assert.Equal("2013", record.Year);
+        Assert.Equal("6", record.Season);
+        Assert.Equal("3", record.Episode);
+        Assert.Equal("[\"Drama\",\"Comedy\"]", record.Genre);
+        Assert.Null(record.ImdbRating);
+    }
+
+    [Fact]
+    public async Task AnAnswerThatIsNotJson_FailsSayingWhatOmdbSent()
+    {
+        var fake = new FakeOmdb().RouteBody(q => q.Contains("i=tt0000002"), "<html>\n<body>Bad gateway</body></html>");
+        var ex = await Assert.ThrowsAsync<HttpRequestException>(() => Get(fake, "tt0000002"));
+
+        Assert.Contains("<html> <body>Bad gateway</body></html>", ex.Message);
+        Assert.DoesNotContain(FakeOmdb.TestKey, ex.Message);
+    }
+
+    [Fact]
     public async Task ATitleSearchThatFindsNothing_IsNotFound()
     {
         var fake = FakeOmdb.Catalogue();

@@ -1,8 +1,27 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Chronicle.Plugin.OMDb;
 
 // OMDb answers every field as text, "N/A" where it has nothing. Only what is used is declared.
+
+/// <summary>
+/// Reads any JSON value as the text it is. OMDb documents text, but a number or a list where text belongs must not make the whole
+/// record unreadable (and the item Failed): the value is kept as its JSON text and null is nothing.
+/// </summary>
+internal sealed class TextOrAnythingConverter : JsonConverter<string>
+{
+    public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => reader.TokenType switch
+    {
+        JsonTokenType.String => reader.GetString(),
+        JsonTokenType.Null => null,
+        JsonTokenType.True => "true",
+        JsonTokenType.False => "false",
+        _ => JsonDocument.ParseValue(ref reader).RootElement.GetRawText(),
+    };
+
+    public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options) => writer.WriteStringValue(value);
+}
 
 internal sealed class RatingEntry
 {
