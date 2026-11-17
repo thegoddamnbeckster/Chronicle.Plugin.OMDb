@@ -104,13 +104,15 @@ internal sealed class OmdbClient : IDisposable
         if (response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden)
         {
             if (error is not null && error.Contains("limit", StringComparison.OrdinalIgnoreCase))
-                throw new HttpRequestException("OMDb's request limit for today has been reached; the rest waits for the next run", null, HttpStatusCode.TooManyRequests);
+                throw new HttpRequestException("OMDb's request limit for today has been reached; the rest waits for the next run", null, HttpStatusCode.TooManyRequests)
+                    { Data = { ["RetryAfter"] = UntilDailyReset() } };
             throw new PluginAuthException(PluginId, "OMDb rejected the API key" + (error is null ? "" : $" ({error})") +
                                                     ". Check the key in the plugin's settings (a new key must be activated from the email OMDb sends).");
         }
 
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
-            throw new HttpRequestException("OMDb is rate limiting requests", null, HttpStatusCode.TooManyRequests);
+            throw WithRetryAfter(new HttpRequestException("OMDb is rate limiting requests", null, HttpStatusCode.TooManyRequests),
+                                 response.Headers.RetryAfter?.Delta);
 
         if (!response.IsSuccessStatusCode)
             throw new HttpRequestException($"OMDb answered {(int)response.StatusCode} {response.ReasonPhrase}", null, response.StatusCode);
@@ -119,7 +121,8 @@ internal sealed class OmdbClient : IDisposable
         {
             if (NotFoundErrors.Any(e => string.Equals(e, error, StringComparison.OrdinalIgnoreCase))) return null;
             if (error.Contains("limit", StringComparison.OrdinalIgnoreCase))
-                throw new HttpRequestException("OMDb's request limit for today has been reached; the rest waits for the next run", null, HttpStatusCode.TooManyRequests);
+                throw new HttpRequestException("OMDb's request limit for today has been reached; the rest waits for the next run", null, HttpStatusCode.TooManyRequests)
+                    { Data = { ["RetryAfter"] = UntilDailyReset() } };
             if (error.Contains("Invalid API key", StringComparison.OrdinalIgnoreCase) || error.Contains("No API key", StringComparison.OrdinalIgnoreCase))
                 throw new PluginAuthException(PluginId, $"OMDb rejected the API key ({error}).");
             // A query OMDb could not read (the plugin sent something it dislikes) must not fail the whole pass.
@@ -177,6 +180,19 @@ internal sealed class OmdbClient : IDisposable
             return response;
         }
         finally { _gate.Release(); }
+    }
+
+    /// <summary>OMDb's daily allowance renews at 00:00 UTC: how long until then (the queue holds the item that long, and carries on with the rest).</summary>
+    private static TimeSpan UntilDailyReset() => DateTime.UtcNow.Date.AddDays(1) - DateTime.UtcNow;
+
+    /// <summary>
+    /// Says how long the provider asked clients to wait, on the exception, under the key Chronicle's queue reads
+    /// (<c>Data["RetryAfter"]</c>, a TimeSpan): the host never waits less, and an item held for a long time goes to the back of the queue.
+    /// </summary>
+    private static HttpRequestException WithRetryAfter(HttpRequestException ex, TimeSpan? after)
+    {
+        if (after is { } a && a > TimeSpan.Zero) ex.Data["RetryAfter"] = a;
+        return ex;
     }
 
     public void Dispose() => _gate.Dispose();

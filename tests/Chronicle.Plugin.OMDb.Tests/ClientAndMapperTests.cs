@@ -73,6 +73,7 @@ public class ClientTests
         var ex = await Assert.ThrowsAsync<HttpRequestException>(() => Get(fake, "tt0133093"));
 
         Assert.Equal(HttpStatusCode.TooManyRequests, ex.StatusCode);
+        Assert.InRange((TimeSpan)ex.Data["RetryAfter"]!, TimeSpan.Zero, TimeSpan.FromDays(1));   // until the allowance renews at 00:00 UTC
         Assert.Equal(1, fake.Requests);
         Assert.Empty(fake.Delays.Where(d => d > TimeSpan.FromSeconds(1)));   // waiting for tomorrow is not an option
     }
