@@ -21,6 +21,7 @@ internal static class MetadataMapper
         var ratings = (r.Ratings ?? [])
             .Where(x => TextRules.Value(x.Source) is not null && TextRules.Value(x.Value) is not null)
             .Select(x => new Dictionary<string, object?> { ["source"] = x.Source!.Trim(), ["value"] = x.Value!.Trim() }).ToList();
+        var scores = Scores(r);
         double? Rated(string source) => (r.Ratings ?? []).FirstOrDefault(x => string.Equals(x.Source?.Trim(), source, StringComparison.OrdinalIgnoreCase)) is { } hit
             ? TextRules.Score(hit.Value) : null;
 
@@ -53,7 +54,8 @@ internal static class MetadataMapper
                 ["dvd"] = TextRules.Value(r.Dvd),
                 ["production"] = TextRules.Value(r.Production),
                 ["website"] = TextRules.Value(r.Website),
-                ["ratings"] = ratings,
+                ["ratings"] = scores,       // Chronicle's ratings contract: numeric value + scale, so the item page can show each one
+                ["ratings_raw"] = ratings,  // OMDb's own list, as sent ("83%", "73/100")
                 ["imdb_rating"] = TextRules.Decimal(r.ImdbRating),
                 ["imdb_votes"] = TextRules.Count(r.ImdbVotes),
                 ["rotten_tomatoes_percent"] = Rated("Rotten Tomatoes"),
@@ -64,6 +66,26 @@ internal static class MetadataMapper
                 ["series_imdb_id"] = TextRules.Value(r.SeriesId),
             }),
         };
+    }
+
+    /// <summary>
+    /// The scores in the shape of Chronicle's ratings contract (key, variant, value, scale, votes). IMDb's is out of 10 with its vote
+    /// count; Rotten Tomatoes' is the critics' percentage and Metacritic's the Metascore out of 100, both relayed (OMDb carries neither
+    /// the audience score nor the user score). A source OMDb has no value for ("N/A") is left out, never zero.
+    /// </summary>
+    internal static List<Dictionary<string, object?>> Scores(OmdbRecord r)
+    {
+        var list = new List<Dictionary<string, object?>>();
+        if (TextRules.Decimal(r.ImdbRating) is > 0 and var imdb)
+            list.Add(new() { ["key"] = "imdb", ["value"] = imdb, ["scale"] = 10, ["votes"] = TextRules.Count(r.ImdbVotes) });
+        double? Listed(string source) => (r.Ratings ?? []).FirstOrDefault(x => string.Equals(x.Source?.Trim(), source, StringComparison.OrdinalIgnoreCase)) is { } hit
+            ? TextRules.Score(hit.Value) : null;
+        if (Listed("Rotten Tomatoes") is > 0 and var rt)
+            list.Add(new() { ["key"] = "rottentomatoes", ["variant"] = "critics", ["value"] = rt, ["scale"] = 100 });
+        var meta = (double?)TextRules.Count(r.Metascore) ?? Listed("Metacritic");
+        if (meta is > 0)
+            list.Add(new() { ["key"] = "metacritic", ["variant"] = "critics", ["value"] = meta, ["scale"] = 100 });
+        return list;
     }
 
     /// <summary>A search hit: what the search itself returned (no plot, no runtime).</summary>

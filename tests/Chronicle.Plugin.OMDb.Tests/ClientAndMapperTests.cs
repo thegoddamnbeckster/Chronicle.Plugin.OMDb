@@ -218,12 +218,35 @@ public class MapperTests
         Assert.Equal(83, data.GetProperty("rotten_tomatoes_percent").GetDouble());
         Assert.Equal(73, data.GetProperty("metacritic_score").GetInt32());
         Assert.Equal(2284373, data.GetProperty("imdb_votes").GetInt32());
-        Assert.Equal(3, data.GetProperty("ratings").GetArrayLength());
+        Assert.Equal(3, data.GetProperty("ratings_raw").GetArrayLength());
         Assert.Equal("R", data.GetProperty("rated").GetString());
         Assert.Equal("$177,559,005", data.GetProperty("box_office").GetString());
         Assert.Equal("tt0133093", data.GetProperty("ids").GetProperty("imdb").GetString());
         Assert.Contains("English", data.GetProperty("languages").EnumerateArray().Select(e => e.GetString()));
         Assert.Equal("1999-03-31", data.GetProperty("released_iso").GetString());
+    }
+
+    [Fact]
+    public void TheScores_AreContractShaped_WithNumericValueAndScale()
+    {
+        var data = MetadataMapper.Record(Load("movie_matrix.json")).ExtendedData!.Value;
+        var by = data.GetProperty("ratings").EnumerateArray().ToDictionary(e => e.GetProperty("key").GetString()!);
+        Assert.Equal(3, by.Count);
+        Assert.Equal(10, by["imdb"].GetProperty("scale").GetDouble());
+        Assert.Equal(2284373, by["imdb"].GetProperty("votes").GetInt32());
+        Assert.Equal(83, by["rottentomatoes"].GetProperty("value").GetDouble());
+        Assert.Equal(100, by["rottentomatoes"].GetProperty("scale").GetDouble());
+        Assert.Equal("critics", by["rottentomatoes"].GetProperty("variant").GetString());
+        Assert.Equal(73, by["metacritic"].GetProperty("value").GetDouble());
+        Assert.Equal("critics", by["metacritic"].GetProperty("variant").GetString());
+        Assert.All(by.Values, e => Assert.Equal(System.Text.Json.JsonValueKind.Number, e.GetProperty("value").ValueKind));
+    }
+
+    [Fact]
+    public void ANotAvailableScore_IsLeftOut_NeverZero()
+    {
+        var r = new OmdbRecord { ImdbRating = "N/A", Metascore = "N/A", Ratings = [new RatingEntry { Source = "Rotten Tomatoes", Value = "N/A" }] };
+        Assert.Empty(MetadataMapper.Scores(r));
     }
 
     [Fact]

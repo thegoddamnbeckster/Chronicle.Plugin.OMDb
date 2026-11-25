@@ -1,7 +1,7 @@
 {
   "plugin_id":   "chronicle.plugin.omdb",
   "name":        "OMDb",
-  "version":     "1.0.5",
+  "version":     "1.1.0",
   "author":      "Chronicle Contributors",
   "description": "Movie, series and episode metadata from OMDb by IMDb id: full plots, posters, runtimes, cast and crew, and ratings from IMDb, Rotten Tomatoes and Metacritic. Needs a free OMDb API key (omdbapi.com/apikey.aspx, 1,000 requests a day). Fills what other sources lack, especially TV episodes.",
   "min_chronicle_version": "0.7.0",
@@ -28,6 +28,29 @@
       "description":     "Re-fetches all OMDb metadata to pick up new plots, posters and ratings. Uses a request per item, so a large library takes several days on the free key.",
       "default_cron":    "10 6 * * 2",
       "default_enabled": false
+    }
+  ],
+  "rating_sources": [
+    {
+      "key":          "imdb",
+      "display_name": "IMDb",
+      "plain_rating": true,
+      "scale":        10,
+      "star":         "single",
+      "attribution":  "Information courtesy of IMDb (https://www.imdb.com). Used with permission."
+    },
+    {
+      "key":          "rottentomatoes",
+      "variant":      "critics",
+      "display_name": "Rotten Tomatoes",
+      "scale":        100,
+      "display":      "percent"
+    },
+    {
+      "key":          "metacritic",
+      "variant":      "critics",
+      "display_name": "Metacritic",
+      "scale":        100
     }
   ],
   "settings": []
