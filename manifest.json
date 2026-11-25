@@ -1,7 +1,7 @@
 {
   "plugin_id":   "chronicle.plugin.omdb",
   "name":        "OMDb",
-  "version":     "1.1.0",
+  "version":     "1.2.0",
   "author":      "Chronicle Contributors",
   "description": "Movie, series and episode metadata from OMDb by IMDb id: full plots, posters, runtimes, cast and crew, and ratings from IMDb, Rotten Tomatoes and Metacritic. Needs a free OMDb API key (omdbapi.com/apikey.aspx, 1,000 requests a day). Fills what other sources lack, especially TV episodes.",
   "min_chronicle_version": "0.7.0",
@@ -37,6 +37,9 @@
       "plain_rating": true,
       "scale":        10,
       "star":         "single",
+      "look":         "star-text",
+      "font_family":  "Roboto",
+      "logo_url":     "https://www.imdb.com/favicon.ico",
       "attribution":  "Information courtesy of IMDb (https://www.imdb.com). Used with permission."
     },
     {
@@ -44,13 +47,28 @@
       "variant":      "critics",
       "display_name": "Rotten Tomatoes",
       "scale":        100,
-      "display":      "percent"
+      "display":      "percent",
+      "look":         "icon-percent",
+      "label":        "Tomatometer",
+      "font_family":  "Libre Franklin",
+      "thresholds": [
+        { "min": 0,  "color": "#0AC855", "icon": "rotten" },
+        { "min": 60, "color": "#FA320A", "icon": "fresh" }
+      ]
     },
     {
       "key":          "metacritic",
       "variant":      "critics",
       "display_name": "Metacritic",
-      "scale":        100
+      "scale":        100,
+      "look":         "badge",
+      "label":        "Metascore",
+      "font_family":  "Nunito Sans",
+      "thresholds": [
+        { "min": 0,  "color": "#FF6874" },
+        { "min": 40, "color": "#FFBD3F" },
+        { "min": 61, "color": "#00CE7A" }
+      ]
     }
   ],
   "settings": []
